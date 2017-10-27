@@ -9,6 +9,7 @@ import org.springframework.integration.config.EnableIntegrationManagement;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.http.Http;
+import org.springframework.integration.splitter.DefaultMessageSplitter;
 
 @SpringBootApplication
 @EnableIntegrationManagement
@@ -30,8 +31,18 @@ public class HttpBootApplication {
                     Http.inboundGateway("/receiveGateway")
                         .requestMapping(m -> m.methods(HttpMethod.POST))
                         .requestPayloadType(String.class))
+                    .split(commaSplitter())
                     .<String, String>transform(p -> p + " from the other side")
                     .<String, String>transform(String::toUpperCase)
+                    .aggregate()
+                    .transform(Object::toString)
                     .get();
+    }
+    
+    @Bean
+    public DefaultMessageSplitter commaSplitter() {
+        DefaultMessageSplitter splitter = new DefaultMessageSplitter();
+        splitter.setDelimiters(",");
+        return splitter;
     }
 }
