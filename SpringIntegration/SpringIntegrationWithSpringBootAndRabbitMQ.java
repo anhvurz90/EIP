@@ -59,6 +59,34 @@ Spring Integration: implements EIP
 }
 6.Demo: {
   - github/spring-projects/spring-integration-samples
+  - github/spring-projects/spring-integration-extension(s)
+  - Java DSL
+  6.1.Xml: {
+    - Server: servlet-config.xml: {
+      <int-http:inbound-gateway request-channel="receiveChannel"
+				path="/receiveGateway"
+				supported-methods="POST"/>
+
+      <int:channel id="receiveChannel"/>
+
+      <int:chain input-channel="receiveChannel">
+        <int:transformer expression="payload + ' from the other side'"/>
+        <int:transformer expression="payload.toUpperCase()"/>
+      </int:chain>
+    }
+    - Client: http-outbound-config.xml: {
+      <int:gateway id="requestGateway"
+		   service-interface="org.springframework.integration.samples.http.RequestGateway"
+		   default-request-channel="requestChannel"/>
+
+      <int:channel id="requestChannel"/>
+ 
+      <int-http:outbound-gateway request-channel-"requestChannel"
+				 url="http://localhost:8080/http/receiveGateway"
+				 http-method="POST"
+				 expeced-response-type="java.lang.String"/>
+
+    }
+  }
 }
-21:00
-22:00
+24:25
