@@ -1,5 +1,7 @@
 package com.anhvurz90.springIntegration.serverSample1;
 
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.integration.config.EnableIntegrationManagement;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
+import org.springframework.integration.dsl.amqp.Amqp;
 import org.springframework.integration.dsl.http.Http;
 import org.springframework.integration.splitter.DefaultMessageSplitter;
 
@@ -26,14 +29,15 @@ public class HttpBootApplication {
     }
 
     @Bean
-    public IntegrationFlow flow() {
+    public IntegrationFlow flow(RabbitTemplate rabbitTemplate) {
         return IntegrationFlows.from(
                     Http.inboundGateway("/receiveGateway")
                         .requestMapping(m -> m.methods(HttpMethod.POST))
                         .requestPayloadType(String.class))
                     .split(commaSplitter())
                     .<String, String>transform(p -> p + " from the other side")
-                    .<String, String>transform(String::toUpperCase)
+//                    .<String, String>transform(String::toUpperCase)
+                    .handle(Amqp.outboundGateway(rabbitTemplate).routingKey("queue1"))
                     .aggregate()
                     .transform(Object::toString)
                     .get();
@@ -44,5 +48,12 @@ public class HttpBootApplication {
         DefaultMessageSplitter splitter = new DefaultMessageSplitter();
         splitter.setDelimiters(",");
         return splitter;
+    }
+    
+    @Bean
+    public IntegrationFlow amqp(ConnectionFactory connectionFactory) {
+        return IntegrationFlows.from(Amqp.inboundGateway(connectionFactory, "queue1"))
+                .<String, String>transform(String::toUpperCase)
+                .get();
     }
 }
